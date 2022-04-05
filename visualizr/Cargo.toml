@@ -1,0 +1,11 @@
+[package]
+name = "visualizr-mq"
+version = "0.1.0"
+edition = "2021"
+authors = ["Martin Taibr <taibr.martin@gmail.com>"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+macroquad = "0.3.15"
+commonr = { path = "../commonr" }

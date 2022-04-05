@@ -1,0 +1,4 @@
+# Separate target for rust-analyzer to speed up builds
+/target-ra
+
+/target

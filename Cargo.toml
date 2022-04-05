@@ -1,0 +1,11 @@
+[workspace]
+
+members = [
+    "bindingsr/",
+    "commonr/",
+    "inspectr/src/rust/",
+    "visualizr/"
+]
+default-members = [
+    "visualizr"
+]

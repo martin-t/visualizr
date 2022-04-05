@@ -1,0 +1,10 @@
+Package: inspectr
+Title: Visualize the Internals of R Objects
+Version: 0.0.0.9000
+Authors@R: 
+    person("Martin", "Taibr", , "taibr.martin@gmail.com", role = c("aut", "cre"))
+Description: Send the internals of R objects to visualizr to be drawn.
+License: AGPL (>= 3)
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.2
