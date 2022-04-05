@@ -5,7 +5,7 @@
 use std::{ffi::CStr, net::TcpStream};
 
 use bindingsr::*;
-use commonr::net;
+use commonr::{data::SexprecHeader, net};
 use extendr_api::prelude::*;
 
 // For testing:
@@ -24,6 +24,7 @@ visualize(s)
 fn visualize(obj: Robj) {
     let sexp = to_sexp(obj);
     //println!("test {:?}", sexp); // LATER lint against normal print(ln)?
+
     let ty = unsafe { TYPEOF(sexp) };
     assert!(ty >= 0);
     // TODO safety
@@ -31,6 +32,15 @@ fn visualize(obj: Robj) {
     let ty_name = unsafe { CStr::from_ptr(Rf_type2char(ty as u32)) };
     let s = format!("test {:?} {} {:?}", sexp, ty, ty_name);
     rprintln!("sending to visualizr: {}", s);
+    // FIXME maybe rather use the C functions to get all the bits?
+    let sexr = unsafe { &*sexp };
+    let sxpinfo = sexr.sxpinfo._bitfield_1.get(0, 64);
+    let msg = SexprecHeader {
+        sxpinfo,
+        attrib: sexr.attrib as u64,
+        gengc_next_node: sexr.gengc_next_node as u64,
+        gengc_prev_node: sexr.gengc_prev_node as u64,
+    };
 
     // Open a new connection each time because I don't wnna deal with weirdness
     // like what happens if I store it in a thread local and then the lib gets updated and reloaded.
@@ -38,8 +48,8 @@ fn visualize(obj: Robj) {
     //stream.set_nodelay(true).unwrap();
     //stream.set_nonblocking(true).unwrap();
 
-    let msg = net::serialize(s);
-    net::send(&msg, &mut stream).unwrap();
+    let netmsg = net::serialize(msg);
+    net::send(&netmsg, &mut stream).unwrap();
 }
 
 fn to_sexp(obj: Robj) -> SEXP {

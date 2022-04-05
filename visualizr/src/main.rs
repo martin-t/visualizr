@@ -4,7 +4,7 @@ use std::{
     net::{TcpListener, TcpStream},
 };
 
-use commonr::net;
+use commonr::{data::SexprecHeader, net};
 use macroquad::{
     hash,
     prelude::*,
@@ -15,7 +15,7 @@ use macroquad::{
 struct Server {
     listener: TcpListener,
     connection: Option<Connection>,
-    msgs: Vec<String>,
+    msgs: Vec<SexprecHeader>,
 }
 
 impl Server {
@@ -71,7 +71,10 @@ async fn main() {
 
         for msg in server.msgs.drain(..) {
             dbg!(&msg);
-            text.push_str(&msg);
+            text.push_str(&format!("bits {:#b}\n", msg.sxpinfo));
+            text.push_str(&format!("attrib {:#x}\n", msg.attrib));
+            text.push_str(&format!("gengc_next_node {:#x}\n", msg.gengc_next_node));
+            text.push_str(&format!("gengc_prev_node {:#x}\n", msg.gengc_prev_node));
             text.push('\n');
         }
 
@@ -79,7 +82,7 @@ async fn main() {
 
         let box1_pos = vec2(50.0, 50.0);
         let box2_pos = vec2(100.0, 400.0);
-        let box_size = vec2(500.0, 150.0);
+        let box_size = vec2(500.0, 250.0);
 
         draw_box(1, box1_pos, box_size, &text);
         draw_box(2, box2_pos, box_size, &text);
