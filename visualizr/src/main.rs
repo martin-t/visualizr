@@ -80,16 +80,17 @@ async fn main() {
         msgs: Vec::new(),
     };
 
-    let mut text = "messages:\n".to_owned();
+    let mut text = "<nothing>\n".to_owned();
     loop {
         server.receive();
 
         for msg in server.msgs.drain(..) {
             dbg!(&msg);
+            text = String::new();
+            text.push_str(&format!("@{} {}\n", msg.address, msg.ty_name));
             text.push_str(
                 "sxpinfo: type scalar obj alt       gp bits      mark debug trace spare gcgen gccls named extra\n",
             );
-            // TODO gp wider and as bits
             text.push_str(&format!(
                 "         {:4} {:6} {:3} {:3}  {:016b}  {:4} {:5} {:5} {:5} {:5} {:5} {:5} {:5}\n",
                 msg.sxpinfo.ty,

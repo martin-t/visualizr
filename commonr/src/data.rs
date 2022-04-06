@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SexprecHeader {
+    pub address: u64,
+    pub ty_name: String,
     pub sxpinfo: Sxpinfo,
     pub sxpinfo_bits: u64,
     pub attrib: u64,

@@ -50,12 +50,15 @@ fn visualize(obj: Robj) {
 
     assert!(sxpinfo.ty >= 0);
     // LATER Rf_sexptype2char / sexptype2char? (returns the name in CAPS like inspect)
-    let ty_name = unsafe { CStr::from_ptr(Rf_type2char(sxpinfo.ty as u32)) };
+    let ty_cstr = unsafe { CStr::from_ptr(Rf_type2char(sxpinfo.ty as u32)) };
+    let ty_name = ty_cstr.to_str().unwrap().to_owned();
     let s = format!("test {:?} {} {:?}", sexp, sxpinfo.ty, ty_name);
     rprintln!("sending to visualizr: {}", s);
 
     let sxpinfo_bits = sexr.sxpinfo._bitfield_1.get(0, 64);
     let msg = SexprecHeader {
+        address: sexp as u64,
+        ty_name,
         sxpinfo,
         sxpinfo_bits,
         attrib: sexr.attrib as u64,
