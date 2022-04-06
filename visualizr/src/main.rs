@@ -54,7 +54,22 @@ struct Connection {
     buffer: VecDeque<u8>,
 }
 
-#[macroquad::main("visualizr")]
+fn window_conf() -> Conf {
+    Conf {
+        window_title: "visualizr".to_owned(),
+        // Setting width and height to the size of the screen or larger
+        // creates a maximized window. Tested on Kubuntu 20.10.
+        // Not using larger values (or i32::MAX) in case other platforms behave differently.
+        window_width: 1920,
+        window_height: 1080,
+        // LATER Prevent resizing or handle it properly when using render targets.
+        // Can't use fullscreen: true because of https://github.com/not-fl3/macroquad/issues/237.
+        // Can't use window_resizable: false because Kubuntu's panel would cover the bottom part of the window.
+        ..Default::default()
+    }
+}
+
+#[macroquad::main(window_conf)]
 async fn main() {
     let listener = TcpListener::bind("127.0.0.1:26000").unwrap();
     listener.set_nonblocking(true).unwrap();
