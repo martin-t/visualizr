@@ -87,11 +87,11 @@ async fn main() {
         for msg in server.msgs.drain(..) {
             dbg!(&msg);
             text.push_str(
-                "sxpinfo type scalar obj alt gp mark debug trace spare gcgen gccls named extra\n",
+                "sxpinfo: type scalar obj alt       gp bits      mark debug trace spare gcgen gccls named extra\n",
             );
             // TODO gp wider and as bits
             text.push_str(&format!(
-                "sxpinfo {:4} {:6} {:3} {:3} {:2} {:4} {:5} {:5} {:5} {:5} {:5} {:5} {:5}\n",
+                "         {:4} {:6} {:3} {:3}  {:016b}  {:4} {:5} {:5} {:5} {:5} {:5} {:5} {:5}\n",
                 msg.sxpinfo.ty,
                 msg.sxpinfo.scalar,
                 msg.sxpinfo.obj,
