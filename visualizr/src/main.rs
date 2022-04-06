@@ -71,7 +71,27 @@ async fn main() {
 
         for msg in server.msgs.drain(..) {
             dbg!(&msg);
-            text.push_str(&format!("bits {:#b}\n", msg.sxpinfo));
+            text.push_str(
+                "sxpinfo type scalar obj alt gp mark debug trace spare gcgen gccls named extra\n",
+            );
+            // TODO gp wider and as bits
+            text.push_str(&format!(
+                "sxpinfo {:4} {:6} {:3} {:3} {:2} {:4} {:5} {:5} {:5} {:5} {:5} {:5} {:5}\n",
+                msg.sxpinfo.ty,
+                msg.sxpinfo.scalar,
+                msg.sxpinfo.obj,
+                msg.sxpinfo.alt,
+                msg.sxpinfo.gp,
+                msg.sxpinfo.mark,
+                msg.sxpinfo.debug,
+                msg.sxpinfo.trace,
+                msg.sxpinfo.spare,
+                msg.sxpinfo.gcgen,
+                msg.sxpinfo.gccls,
+                msg.sxpinfo.named,
+                msg.sxpinfo.extra,
+            ));
+            text.push_str(&format!("sxpinfo as bits {:#b}\n", msg.sxpinfo_bits));
             text.push_str(&format!("attrib {:#x}\n", msg.attrib));
             text.push_str(&format!("gengc_next_node {:#x}\n", msg.gengc_next_node));
             text.push_str(&format!("gengc_prev_node {:#x}\n", msg.gengc_prev_node));
@@ -82,7 +102,7 @@ async fn main() {
 
         let box1_pos = vec2(50.0, 50.0);
         let box2_pos = vec2(100.0, 400.0);
-        let box_size = vec2(500.0, 250.0);
+        let box_size = vec2(800.0, 250.0);
 
         draw_box(1, box1_pos, box_size, &text);
         draw_box(2, box2_pos, box_size, &text);

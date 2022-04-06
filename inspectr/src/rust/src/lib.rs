@@ -5,7 +5,10 @@
 use std::{ffi::CStr, net::TcpStream};
 
 use bindingsr::*;
-use commonr::{data::SexprecHeader, net};
+use commonr::{
+    data::{SexprecHeader, Sxpinfo},
+    net,
+};
 use extendr_api::prelude::*;
 
 // For testing:
@@ -23,26 +26,44 @@ visualize(s)
 #[extendr]
 fn visualize(obj: Robj) {
     let sexp = to_sexp(obj);
-    //println!("test {:?}", sexp); // LATER lint against normal print(ln)?
+    // Safety: should be ok to alternate between using the reference and the pointer since neither is mutable.
+    // I couldn't get MIRI to complain when testing even more questionable things like read-only accesses
+    // through mutable references and pointers.
+    let sexr = unsafe { &*sexp };
 
     let ty = unsafe { TYPEOF(sexp) };
-    assert!(ty >= 0);
-    // TODO safety
-    // TODO Rf_sexptype2char / sexptype2char
-    let ty_name = unsafe { CStr::from_ptr(Rf_type2char(ty as u32)) };
-    let s = format!("test {:?} {} {:?}", sexp, ty, ty_name);
+    let sxpinfo = Sxpinfo {
+        ty,
+        scalar: unsafe { IS_SCALAR(sexp, ty) },
+        obj: unsafe { OBJECT(sexp) },
+        alt: unsafe { ALTREP(sexp) },
+        gp: unsafe { LEVELS(sexp) }, // TODO difference from ENVFLAGS?
+        mark: unsafe { MARK(sexp) },
+        debug: unsafe { RDEBUG(sexp) },
+        trace: unsafe { RTRACE(sexp) },
+        spare: unsafe { RSTEP(sexp) },
+        gcgen: sexr.sxpinfo.gcgen(), // NODE_GENERATION(s) is in memory.c so not available to us
+        gccls: sexr.sxpinfo.gccls(), // NODE_CLASS(s) is in memory.c so not available to us
+        named: unsafe { NAMED(sexp) },
+        extra: sexr.sxpinfo.extra(), // Using BNDCELL_TAG causes an error when loading the .so
+    };
+
+    assert!(sxpinfo.ty >= 0);
+    // LATER Rf_sexptype2char / sexptype2char? (returns the name in CAPS like inspect)
+    let ty_name = unsafe { CStr::from_ptr(Rf_type2char(sxpinfo.ty as u32)) };
+    let s = format!("test {:?} {} {:?}", sexp, sxpinfo.ty, ty_name);
     rprintln!("sending to visualizr: {}", s);
-    // FIXME maybe rather use the C functions to get all the bits?
-    let sexr = unsafe { &*sexp };
-    let sxpinfo = sexr.sxpinfo._bitfield_1.get(0, 64);
+
+    let sxpinfo_bits = sexr.sxpinfo._bitfield_1.get(0, 64);
     let msg = SexprecHeader {
         sxpinfo,
+        sxpinfo_bits,
         attrib: sexr.attrib as u64,
         gengc_next_node: sexr.gengc_next_node as u64,
         gengc_prev_node: sexr.gengc_prev_node as u64,
     };
 
-    // Open a new connection each time because I don't wnna deal with weirdness
+    // Open a new connection each time because I don't wanna deal with weirdness
     // like what happens if I store it in a thread local and then the lib gets updated and reloaded.
     let mut stream = TcpStream::connect("127.0.0.1:26000").unwrap();
     //stream.set_nodelay(true).unwrap();
