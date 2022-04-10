@@ -23,11 +23,11 @@ impl Display for Update {
         // named and extra are 16 bits so 5 digits is exactly enough,
         // everything else has more space than needed
         writeln!(f,
-                "sxpinfo: type scalar obj alt       gp bits      mark debug trace spare gcgen gccls named extra",
+                "sxpinfo: type scalar obj alt        gp bits       mark debug trace spare gcgen gccls named extra",
             )?;
         writeln!(
             f,
-            "         {:4} {:6} {:3} {:3}  {:016b}  {:4} {:5} {:5} {:5} {:5} {:5} {:5} {:5}",
+            "         {:4} {:6} {:3} {:3}  {:#018b}  {:4} {:5} {:5} {:5} {:5} {:5} {:5} {:5}",
             self.sexprec.sxpinfo.ty,
             self.sexprec.sxpinfo.scalar,
             self.sexprec.sxpinfo.obj,
