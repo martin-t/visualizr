@@ -4,7 +4,10 @@ use std::{
     net::{TcpListener, TcpStream},
 };
 
-use commonr::{data::SexprecHeader, net};
+use commonr::{
+    data::{Sexprec, Update},
+    net,
+};
 use macroquad::{
     hash,
     prelude::*,
@@ -15,7 +18,7 @@ use macroquad::{
 struct Server {
     listener: TcpListener,
     connection: Option<Connection>,
-    msgs: Vec<SexprecHeader>,
+    msgs: Vec<Update>,
 }
 
 impl Server {
@@ -86,32 +89,7 @@ async fn main() {
 
         for msg in server.msgs.drain(..) {
             dbg!(&msg);
-            text = String::new();
-            text.push_str(&format!("@{} {}\n", msg.address, msg.ty_name));
-            text.push_str(
-                "sxpinfo: type scalar obj alt       gp bits      mark debug trace spare gcgen gccls named extra\n",
-            );
-            text.push_str(&format!(
-                "         {:4} {:6} {:3} {:3}  {:016b}  {:4} {:5} {:5} {:5} {:5} {:5} {:5} {:5}\n",
-                msg.sxpinfo.ty,
-                msg.sxpinfo.scalar,
-                msg.sxpinfo.obj,
-                msg.sxpinfo.alt,
-                msg.sxpinfo.gp,
-                msg.sxpinfo.mark,
-                msg.sxpinfo.debug,
-                msg.sxpinfo.trace,
-                msg.sxpinfo.spare,
-                msg.sxpinfo.gcgen,
-                msg.sxpinfo.gccls,
-                msg.sxpinfo.named,
-                msg.sxpinfo.extra,
-            ));
-            text.push_str(&format!("sxpinfo as bits {:#b}\n", msg.sxpinfo_bits));
-            text.push_str(&format!("attrib {:#x}\n", msg.attrib));
-            text.push_str(&format!("gengc_next_node {:#x}\n", msg.gengc_next_node));
-            text.push_str(&format!("gengc_prev_node {:#x}\n", msg.gengc_prev_node));
-            text.push('\n');
+            text = msg.to_string();
         }
 
         clear_background(WHITE);
