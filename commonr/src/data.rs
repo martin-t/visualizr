@@ -9,6 +9,7 @@ pub struct Update {
     pub sexprec: Sexprec,
 }
 
+#[rustfmt::skip]
 impl Display for Update {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         writeln!(
@@ -42,23 +43,45 @@ impl Display for Update {
             self.sexprec.sxpinfo.extra,
         )?;
         writeln!(f, "sxpinfo as bits {:#b}", self.sexprec.sxpinfo_bits)?;
-        writeln!(
-            f,
-            "attrib {}",
-            self.special_values.fmt_ptr(self.sexprec.attrib)
-        )?;
-        writeln!(
-            f,
-            "gengc_next_node {}",
-            self.special_values.fmt_ptr(self.sexprec.gengc_next_node)
-        )?;
-        writeln!(
-            f,
-            "gengc_prev_node {}",
-            self.special_values.fmt_ptr(self.sexprec.gengc_prev_node)
-        )?;
+        writeln!(f, "attrib {}", self.special_values.fmt_ptr(self.sexprec.attrib))?;
+        writeln!(f, "gengc_next_node {}", self.special_values.fmt_ptr(self.sexprec.gengc_next_node))?;
+        writeln!(f, "gengc_prev_node {}", self.special_values.fmt_ptr(self.sexprec.gengc_prev_node))?;
 
-        // TODO payload
+        match &self.sexprec.payload {
+            SexpPayload::Nothing => writeln!(f, "no paylod")?,
+            SexpPayload::Vecsxp(vecsxp) => {
+                writeln!(f, "length: {}", vecsxp.length)?;
+                writeln!(f, "truelength: {}", vecsxp.truelength)?;
+            }
+            SexpPayload::Primsxp(primsxp) => {
+                writeln!(f, "offset: {}", primsxp.offset)?;
+            },
+            SexpPayload::Symsxp(symsxp) => {
+                writeln!(f, "pname: {}", self.special_values.fmt_ptr(symsxp.pname))?;
+                writeln!(f, "value: {}", self.special_values.fmt_ptr(symsxp.value))?;
+                writeln!(f, "internal: {}", self.special_values.fmt_ptr(symsxp.internal))?;
+            },
+            SexpPayload::Listsxp(listsxp) => {
+                writeln!(f, "carval: {}", self.special_values.fmt_ptr(listsxp.carval))?;
+                writeln!(f, "cdrval: {}", self.special_values.fmt_ptr(listsxp.cdrval))?;
+                writeln!(f, "tagval: {}", self.special_values.fmt_ptr(listsxp.tagval))?;
+            },
+            SexpPayload::Envsxp(envsxp) => {
+                writeln!(f, "frame: {}", self.special_values.fmt_ptr(envsxp.frame))?;
+                writeln!(f, "enclos: {}", self.special_values.fmt_ptr(envsxp.enclos))?;
+                writeln!(f, "hashtab: {}", self.special_values.fmt_ptr(envsxp.hashtab))?;
+            },
+            SexpPayload::Closxp(closxp) => {
+                writeln!(f, "formals: {}", self.special_values.fmt_ptr(closxp.formals))?;
+                writeln!(f, "body: {}", self.special_values.fmt_ptr(closxp.body))?;
+                writeln!(f, "env: {}", self.special_values.fmt_ptr(closxp.env))?;
+            },
+            SexpPayload::Promsxp(promsxp) => {
+                writeln!(f, "value: {}", self.special_values.fmt_ptr(promsxp.value))?;
+                writeln!(f, "expr: {}", self.special_values.fmt_ptr(promsxp.expr))?;
+                writeln!(f, "env: {}", self.special_values.fmt_ptr(promsxp.env))?;
+            },
+        }
 
         Ok(())
     }

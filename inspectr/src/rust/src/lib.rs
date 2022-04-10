@@ -11,7 +11,6 @@ use extendr_api::prelude::*;
 /*
 For testing:
 
-
 0 NILSXP visualize(NULL)
 1 SYMSXP
 2 LISTSXP
