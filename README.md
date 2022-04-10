@@ -14,7 +14,7 @@ TODO how to use
 
 ## Development
 
-Misc note: `rextendr::document()` doesn't notice when a dependency changes - you have to make a change in inspectr directly for common/bindingsr to be recompiled.
+Misc note: `rextendr::document()` *sometimes* doesn't notice when a dependency changes - you have to make a change in inspectr directly for common/bindingsr to be recompiled.
 
 ## License
 

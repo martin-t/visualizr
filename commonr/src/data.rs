@@ -13,7 +13,7 @@ impl Display for Update {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         writeln!(
             f,
-            "address: {}, type: {}/{:?}",
+            "address: {}, type: {}/{}",
             self.special_values.fmt_ptr(self.sexprec.address),
             self.sexprec.ty_name,
             self.sexprec.ty,
@@ -158,6 +158,12 @@ pub enum Sexptype {
     S4SXP = 25,
     NEWSXP = 30,
     FREESXP = 31,
+}
+
+impl Display for Sexptype {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
