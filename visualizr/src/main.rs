@@ -4,10 +4,7 @@ use std::{
     net::{TcpListener, TcpStream},
 };
 
-use commonr::{
-    data::{Sexprec, Update},
-    net,
-};
+use commonr::{data::Update, net};
 use macroquad::{
     hash,
     prelude::*,

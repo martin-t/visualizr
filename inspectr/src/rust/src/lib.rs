@@ -24,9 +24,9 @@ For testing:
 9 CHARSXP
 10 LGLSXP
 13 INTSXP
-14 REALSXP
+14 REALSXP visualize(1)
 15 CPLXSXP
-16 STRSXP
+16 STRSXP visualize("a")
 17 DOTSXP
 18 ANYSXP
 19 VECSXP
@@ -47,9 +47,9 @@ fn visualize(obj: Robj) {
     let special_values = get_special_values();
 
     let sexp = to_sexp(obj);
-    // Safety: should be ok to alternate between using the reference and the pointer since neither is mutable.
+    // Safety: should be ok to alternate between using the reference and the pointer.
     // I couldn't get MIRI to complain when testing even more questionable things like read-only accesses
-    // through mutable references and pointers.
+    // through mutable references.
     let sexr = unsafe { &*sexp };
 
     let ty_int = unsafe { TYPEOF(sexp) };
@@ -112,7 +112,7 @@ fn visualize(obj: Robj) {
         | Sexptype::CPLXSXP
         | Sexptype::STRSXP
         | Sexptype::VECSXP
-        | Sexptype::RAWSXP => get_vecsxp(sexr),
+        | Sexptype::RAWSXP => get_vecsxp(sexp),
         Sexptype::DOTSXP
         | Sexptype::ANYSXP
         | Sexptype::BCODESXP
@@ -196,12 +196,14 @@ fn get_special_values() -> SpecialValues {
     }
 }
 
-fn get_vecsxp(_sexr: &SEXPREC) -> SexpPayload {
-    // SexpPayload::Vecsxp(Vecsxp {
-    //     length: unsafe { todo!() },
-    //     truelength: unsafe { todo!() },
-    // })
-    todo!("this needs some align magic")
+fn get_vecsxp(sexp: *mut SEXPREC) -> SexpPayload {
+    let sexp_align = sexp as *mut SEXPREC_ALIGN;
+    let sexr_align = unsafe { &*sexp_align };
+
+    SexpPayload::Vecsxp(Vecsxp {
+        length: unsafe { sexr_align.s.vecsxp.length as i64 },
+        truelength: unsafe { sexr_align.s.vecsxp.truelength as i64 },
+    })
 }
 
 // TODO primsxp?

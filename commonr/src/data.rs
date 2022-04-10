@@ -13,9 +13,10 @@ impl Display for Update {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         writeln!(
             f,
-            "address: {}, type: {}",
+            "address: {}, type: {}/{:?}",
             self.special_values.fmt_ptr(self.sexprec.address),
-            self.sexprec.ty_name
+            self.sexprec.ty_name,
+            self.sexprec.ty,
         )?;
 
         // named and extra are 16 bits so 5 digits is exactly enough,
@@ -160,20 +161,6 @@ pub enum Sexptype {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Sexprec {
-    pub address: Sexp,
-    pub ty: Sexptype,
-    pub ty_name: String,
-    pub sxpinfo: Sxpinfo,
-    pub sxpinfo_bits: u64,
-    pub attrib: Sexp,
-    pub attrib_nil: bool,
-    pub gengc_next_node: Sexp,
-    pub gengc_prev_node: Sexp,
-    pub payload: SexpPayload,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
 pub struct Sxpinfo {
     pub ty: i32,
     pub scalar: i32,
@@ -204,8 +191,8 @@ pub enum SexpPayload {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Vecsxp {
-    pub length: u64,
-    pub truelength: u64,
+    pub length: i64,
+    pub truelength: i64,
     // TODO align (in sexp-inspector)
 }
 
@@ -247,4 +234,18 @@ pub struct Promsxp {
     pub value: Sexp,
     pub expr: Sexp,
     pub env: Sexp,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Sexprec {
+    pub address: Sexp,
+    pub ty: Sexptype,
+    pub ty_name: String,
+    pub sxpinfo: Sxpinfo,
+    pub sxpinfo_bits: u64,
+    pub attrib: Sexp,
+    pub attrib_nil: bool,
+    pub gengc_next_node: Sexp,
+    pub gengc_prev_node: Sexp,
+    pub payload: SexpPayload,
 }
