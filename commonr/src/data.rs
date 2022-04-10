@@ -25,6 +25,7 @@ impl Display for Update {
         writeln!(f,
                 "sxpinfo: type scalar obj alt        gp bits       mark debug trace spare gcgen gccls named extra",
             )?;
+        // GP needs 18 chars: 2 for 0b and 16 for the bits
         writeln!(
             f,
             "         {:4} {:6} {:3} {:3}  {:#018b}  {:4} {:5} {:5} {:5} {:5} {:5} {:5} {:5}",
