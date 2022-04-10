@@ -223,7 +223,6 @@ pub enum SexpPayload {
 pub struct Vecsxp {
     pub length: i64,
     pub truelength: i64,
-    // TODO align (in sexp-inspector)
 }
 
 #[derive(Debug, Deserialize, Serialize)]
