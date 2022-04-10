@@ -21,6 +21,7 @@ For testing:
 7 SPECIALSXP
 8 BUILTINSXP visualize(`(`)
 9 CHARSXP
+    contained in STRSXP
 10 LGLSXP
 13 INTSXP
 14 REALSXP visualize(1)
@@ -198,6 +199,8 @@ fn get_special_values() -> SpecialValues {
 fn get_vecsxp(sexp: *mut SEXPREC) -> SexpPayload {
     let sexp_align = sexp as *mut SEXPREC_ALIGN;
     let sexr_align = unsafe { &*sexp_align };
+
+    // TODO This points to another sexp. Also more sexp pointers after that?
 
     SexpPayload::Vecsxp(Vecsxp {
         length: unsafe { sexr_align.s.vecsxp.length as i64 },
