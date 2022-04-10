@@ -1,12 +1,21 @@
-Visualizr
-=========
+# Visualizr
 
 A tool for visualizing the internal representation of objects in the R language
 
 TODO screenshot
 
+## Dependencies
+
 TODO mq deps
+
+## Usage
 
 TODO how to use
 
-TODO licenses
+## Development
+
+Misc note: `rextendr::document()` doesn't notice when a dependency changes - you have to make a change in inspectr directly for common/bindingsr to be recompiled.
+
+## License
+
+TODO also licenses in cargo.toml
