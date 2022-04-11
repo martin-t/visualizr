@@ -11,22 +11,22 @@ use extendr_api::prelude::*;
 /*
 For testing:
 
-0 NILSXP visualize(NULL)
-1 SYMSXP
+0 NILSXP    visualize(NULL)
+1 SYMSXP    x <- 1; visualize(substitute(x))
 2 LISTSXP
-3 CLOSXP visualize(visualize)
+3 CLOSXP    visualize(visualize)
 4 ENVSXP
 5 PROMSXP
-6 LANGSXP visualize(substitute(2+2))
+6 LANGSXP   visualize(substitute(2+2))
 7 SPECIALSXP
-8 BUILTINSXP visualize(`(`)
+8 BUILTINSXP    visualize(`(`)
 9 CHARSXP
     contained in STRSXP
 10 LGLSXP
 13 INTSXP
-14 REALSXP visualize(1)
+14 REALSXP  visualize(1)
 15 CPLXSXP
-16 STRSXP visualize("a")
+16 STRSXP   visualize("a")
 17 DOTSXP
 18 ANYSXP
 19 VECSXP

@@ -25,6 +25,9 @@ impl Display for Update {
         writeln!(f,
                 "sxpinfo: type scalar obj alt        gp bits       mark debug trace spare gcgen gccls named extra",
             )?;
+        writeln!(f,
+                "   bits:  [1]    [1] [1] [1]          [16]         [1]   [1]   [1]   [1]   [1]   [3]  [16]  [16]",
+            )?;
         // GP needs 18 chars: 2 for 0b and 16 for the bits
         writeln!(
             f,
@@ -43,7 +46,7 @@ impl Display for Update {
             self.sexprec.sxpinfo.named,
             self.sexprec.sxpinfo.extra,
         )?;
-        writeln!(f, "sxpinfo as bits {:#b}", self.sexprec.sxpinfo_bits)?;
+        writeln!(f, "sxpinfo as bits {:#066b}", self.sexprec.sxpinfo_bits)?;
         writeln!(f, "attrib {}", self.special_values.fmt_ptr(self.sexprec.attrib))?;
         writeln!(f, "gengc_next_node {}", self.special_values.fmt_ptr(self.sexprec.gengc_next_node))?;
         writeln!(f, "gengc_prev_node {}", self.special_values.fmt_ptr(self.sexprec.gengc_prev_node))?;
