@@ -104,6 +104,13 @@ async fn main() {
             box2_pos + vec2(0.0, offset),
         );
 
+        // let mut single_line = "test".to_owned();
+        // Group::new(hash!(), box_size)
+        //     .position(box1_pos)
+        //     .ui(&mut root_ui(), |ui| {
+        //         ui.input_text(hash!(), "", &mut single_line);
+        //     });
+
         next_frame().await
     }
 }
