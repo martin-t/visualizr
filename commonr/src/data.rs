@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Update {
-    pub special_values: SpecialValues,
+    pub global_values: GlobalValues,
     pub sexprec: Sexprec,
 }
 
@@ -15,20 +15,21 @@ impl Display for Update {
         writeln!(
             f,
             "address: {}, type: {}/{}",
-            self.special_values.fmt_ptr(self.sexprec.address),
+            self.global_values.fmt_ptr(self.sexprec.address),
             self.sexprec.ty_name,
             self.sexprec.ty,
         )?;
 
+        writeln!(f, "sxpinfo: {:#066b}", self.sexprec.sxpinfo_bits)?;
         // named and extra are 16 bits so 5 digits is exactly enough,
         // everything else has more space than needed
         writeln!(f,
-                "sxpinfo: type scalar obj alt        gp bits       mark debug trace spare gcgen gccls named extra",
+                " fields: type scalar obj alt           gp          mark debug trace spare gcgen gccls named extra",
             )?;
         writeln!(f,
-                "   bits:  [1]    [1] [1] [1]          [16]         [1]   [1]   [1]   [1]   [1]   [3]  [16]  [16]",
+                "   bits:  [5]    [1] [1] [1]          [16]         [1]   [1]   [1]   [1]   [1]   [3]  [16]  [16]",
             )?;
-        // GP needs 18 chars: 2 for 0b and 16 for the bits
+        // GP needs 18 chars: 2 for "0b" and 16 for the bits
         writeln!(
             f,
             "         {:4} {:6} {:3} {:3}  {:#018b}  {:4} {:5} {:5} {:5} {:5} {:5} {:5} {:5}",
@@ -46,13 +47,12 @@ impl Display for Update {
             self.sexprec.sxpinfo.named,
             self.sexprec.sxpinfo.extra,
         )?;
-        writeln!(f, "sxpinfo as bits {:#066b}", self.sexprec.sxpinfo_bits)?;
-        writeln!(f, "attrib {}", self.special_values.fmt_ptr(self.sexprec.attrib))?;
-        writeln!(f, "gengc_next_node {}", self.special_values.fmt_ptr(self.sexprec.gengc_next_node))?;
-        writeln!(f, "gengc_prev_node {}", self.special_values.fmt_ptr(self.sexprec.gengc_prev_node))?;
+        writeln!(f, "attrib {}", self.global_values.fmt_ptr(self.sexprec.attrib))?;
+        writeln!(f, "gengc_next_node {}", self.global_values.fmt_ptr(self.sexprec.gengc_next_node))?;
+        writeln!(f, "gengc_prev_node {}", self.global_values.fmt_ptr(self.sexprec.gengc_prev_node))?;
 
         match &self.sexprec.payload {
-            SexpPayload::Nothing => writeln!(f, "no paylod")?,
+            SexpPayload::Nothing => writeln!(f, "no paylod")?, // TODO all have payload? - remove?
             SexpPayload::Vecsxp(vecsxp) => {
                 writeln!(f, "length: {}", vecsxp.length)?;
                 writeln!(f, "truelength: {}", vecsxp.truelength)?;
@@ -61,29 +61,29 @@ impl Display for Update {
                 writeln!(f, "offset: {}", primsxp.offset)?;
             },
             SexpPayload::Symsxp(symsxp) => {
-                writeln!(f, "pname: {}", self.special_values.fmt_ptr(symsxp.pname))?;
-                writeln!(f, "value: {}", self.special_values.fmt_ptr(symsxp.value))?;
-                writeln!(f, "internal: {}", self.special_values.fmt_ptr(symsxp.internal))?;
+                writeln!(f, "pname: {}", self.global_values.fmt_ptr(symsxp.pname))?;
+                writeln!(f, "value: {}", self.global_values.fmt_ptr(symsxp.value))?;
+                writeln!(f, "internal: {}", self.global_values.fmt_ptr(symsxp.internal))?;
             },
             SexpPayload::Listsxp(listsxp) => {
-                writeln!(f, "carval: {}", self.special_values.fmt_ptr(listsxp.carval))?;
-                writeln!(f, "cdrval: {}", self.special_values.fmt_ptr(listsxp.cdrval))?;
-                writeln!(f, "tagval: {}", self.special_values.fmt_ptr(listsxp.tagval))?;
+                writeln!(f, "carval: {}", self.global_values.fmt_ptr(listsxp.carval))?;
+                writeln!(f, "cdrval: {}", self.global_values.fmt_ptr(listsxp.cdrval))?;
+                writeln!(f, "tagval: {}", self.global_values.fmt_ptr(listsxp.tagval))?;
             },
             SexpPayload::Envsxp(envsxp) => {
-                writeln!(f, "frame: {}", self.special_values.fmt_ptr(envsxp.frame))?;
-                writeln!(f, "enclos: {}", self.special_values.fmt_ptr(envsxp.enclos))?;
-                writeln!(f, "hashtab: {}", self.special_values.fmt_ptr(envsxp.hashtab))?;
+                writeln!(f, "frame: {}", self.global_values.fmt_ptr(envsxp.frame))?;
+                writeln!(f, "enclos: {}", self.global_values.fmt_ptr(envsxp.enclos))?;
+                writeln!(f, "hashtab: {}", self.global_values.fmt_ptr(envsxp.hashtab))?;
             },
             SexpPayload::Closxp(closxp) => {
-                writeln!(f, "formals: {}", self.special_values.fmt_ptr(closxp.formals))?;
-                writeln!(f, "body: {}", self.special_values.fmt_ptr(closxp.body))?;
-                writeln!(f, "env: {}", self.special_values.fmt_ptr(closxp.env))?;
+                writeln!(f, "formals: {}", self.global_values.fmt_ptr(closxp.formals))?;
+                writeln!(f, "body: {}", self.global_values.fmt_ptr(closxp.body))?;
+                writeln!(f, "env: {}", self.global_values.fmt_ptr(closxp.env))?;
             },
             SexpPayload::Promsxp(promsxp) => {
-                writeln!(f, "value: {}", self.special_values.fmt_ptr(promsxp.value))?;
-                writeln!(f, "expr: {}", self.special_values.fmt_ptr(promsxp.expr))?;
-                writeln!(f, "env: {}", self.special_values.fmt_ptr(promsxp.env))?;
+                writeln!(f, "value: {}", self.global_values.fmt_ptr(promsxp.value))?;
+                writeln!(f, "expr: {}", self.global_values.fmt_ptr(promsxp.expr))?;
+                writeln!(f, "env: {}", self.global_values.fmt_ptr(promsxp.env))?;
             },
         }
 
@@ -92,7 +92,7 @@ impl Display for Update {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct SpecialValues {
+pub struct GlobalValues {
     pub unbound_value: Sexp,
     pub nil_value: Sexp,
     pub missing_arg: Sexp,
@@ -107,7 +107,7 @@ pub struct SpecialValues {
     //pub restart_token: Sexp,
 }
 
-impl SpecialValues {
+impl GlobalValues {
     #[must_use]
     fn fmt_ptr(&self, sexp: Sexp) -> String {
         // Don't impl Display for Sexp so it's impossible to accidentally forget to use this function.
@@ -276,7 +276,6 @@ pub struct Sexprec {
     pub sxpinfo: Sxpinfo,
     pub sxpinfo_bits: u64,
     pub attrib: Sexp,
-    pub attrib_nil: bool,
     pub gengc_next_node: Sexp,
     pub gengc_prev_node: Sexp,
     pub payload: SexpPayload,

@@ -40,13 +40,42 @@ For testing:
 31 FREESXP
 */
 
+// TODO how to receive cmds????
+//     1) loop
+//     2) thread from Rust (R is single threaded)
+//     3) pause process?
+
 /// Inspect obj's representation using visualizr.
 /// @export
 #[extendr]
 fn visualize(obj: Robj) {
-    let special_values = get_special_values();
+    let global_values = get_global_values();
 
     let sexp = to_sexp(obj);
+    let sexprec = get_sexprec(sexp);
+
+    let update = Update {
+        global_values,
+        sexprec,
+    };
+    rprintln!("{}", update);
+
+    // Open a new connection each time because I don't wanna deal with weirdness
+    // like what happens if I store it in a thread local and then the lib gets updated and reloaded.
+    let mut stream = TcpStream::connect("127.0.0.1:26000").unwrap();
+    let netmsg = net::serialize(update);
+    net::send(&netmsg, &mut stream).unwrap();
+}
+
+fn to_sexp(obj: Robj) -> SEXP {
+    // Note the cast is from from libR_sys::SEXP to bindingsr::SEXP
+    match obj {
+        Robj::Owned(sexp) => sexp as bindingsr::SEXP,
+        Robj::Sys(sexp) => sexp as bindingsr::SEXP,
+    }
+}
+
+fn get_sexprec(sexp: SEXP) -> Sexprec {
     // Safety: should be ok to alternate between using the reference and the pointer.
     // I couldn't get MIRI to complain when testing even more questionable things like read-only accesses
     // through mutable references.
@@ -68,7 +97,7 @@ fn visualize(obj: Robj) {
         named: unsafe { NAMED(sexp) },
         extra: sexr.sxpinfo.extra(), // Using BNDCELL_TAG causes an error when loading the .so
     };
-    // TODO named special meaning? NULL has 65535
+    let sxpinfo_bits = sexr.sxpinfo._bitfield_1.get(0, 64);
 
     // TODO GP - from inspect.c
     // if (IS_S4_OBJECT(v)) { if (a) Rprintf(","); Rprintf("S4"); a = 1; }
@@ -99,12 +128,11 @@ fn visualize(obj: Robj) {
     // Note we must not alter the internal state - careful when printing.
 
     let payload = match ty {
-        Sexptype::NILSXP => SexpPayload::Nothing,
-        Sexptype::SYMSXP => get_symsxp(sexr),
-        Sexptype::LISTSXP | Sexptype::LANGSXP | Sexptype::EXPRSXP => get_listsxp(sexr),
-        Sexptype::CLOSXP | Sexptype::SPECIALSXP | Sexptype::BUILTINSXP => get_closxp(sexr),
-        Sexptype::ENVSXP => get_envsxp(sexr),
-        Sexptype::PROMSXP => get_promsxp(sexr),
+        Sexptype::SYMSXP => get_symsxp_payload(sexr),
+        Sexptype::LISTSXP | Sexptype::LANGSXP | Sexptype::EXPRSXP => get_listsxp_payload(sexr),
+        Sexptype::CLOSXP | Sexptype::SPECIALSXP | Sexptype::BUILTINSXP => get_closxp_payload(sexr),
+        Sexptype::ENVSXP => get_envsxp_payload(sexr),
+        Sexptype::PROMSXP => get_promsxp_payload(sexr),
         Sexptype::CHARSXP
         | Sexptype::LGLSXP
         | Sexptype::INTSXP
@@ -113,73 +141,48 @@ fn visualize(obj: Robj) {
         | Sexptype::STRSXP
         | Sexptype::VECSXP
         | Sexptype::RAWSXP => get_vecsxp(sexp),
-        Sexptype::DOTSXP
+        Sexptype::NILSXP // Explicitly initialized as list in memory.c
+        | Sexptype::DOTSXP
         | Sexptype::ANYSXP
         | Sexptype::BCODESXP
         | Sexptype::EXTPTRSXP
         | Sexptype::WEAKREFSXP
         | Sexptype::S4SXP
         | Sexptype::NEWSXP
-        | Sexptype::FREESXP => get_default_sxp(sexr),
+        | Sexptype::FREESXP => get_default_payload(sexr),
     };
 
-    unsafe {
-        dbg!(sexr.u.listsxp.carval);
-        dbg!(sexr.u.listsxp.cdrval);
-        dbg!(sexr.u.listsxp.tagval);
-        dbg!(*std::ptr::addr_of!(sexr.u.listsxp.carval).offset(0));
-        dbg!(*std::ptr::addr_of!(sexr.u.listsxp.carval).offset(1));
-        dbg!(*std::ptr::addr_of!(sexr.u.listsxp.carval).offset(2));
-        dbg!(*std::ptr::addr_of!(sexr.u.listsxp.carval).offset(4));
-        dbg!(*std::ptr::addr_of!(sexr.u.listsxp.carval).offset(5));
-    }
+    // unsafe {
+    //     dbg!(sexr.u.listsxp.carval);
+    //     dbg!(sexr.u.listsxp.cdrval);
+    //     dbg!(sexr.u.listsxp.tagval);
+    //     dbg!(*std::ptr::addr_of!(sexr.u.listsxp.carval).offset(0));
+    //     dbg!(*std::ptr::addr_of!(sexr.u.listsxp.carval).offset(1));
+    //     dbg!(*std::ptr::addr_of!(sexr.u.listsxp.carval).offset(2));
+    //     dbg!(*std::ptr::addr_of!(sexr.u.listsxp.carval).offset(4));
+    //     dbg!(*std::ptr::addr_of!(sexr.u.listsxp.carval).offset(5));
+    // }
 
     // LATER Rf_sexptype2char / sexptype2char? (returns the name in CAPS like inspect)
     let ty_cstr = unsafe { CStr::from_ptr(Rf_type2char(sxpinfo.ty as u32)) };
     let ty_name = ty_cstr.to_str().unwrap().to_owned();
-    let sxpinfo_bits = sexr.sxpinfo._bitfield_1.get(0, 64);
-    let nil = unsafe { R_NilValue };
 
-    let sexprec = Sexprec {
+    Sexprec {
         address: sexp.into(),
         ty,
         ty_name,
         sxpinfo,
         sxpinfo_bits,
         attrib: sexr.attrib.into(),
-        attrib_nil: sexr.attrib == nil,
         gengc_next_node: sexr.gengc_next_node.into(),
         gengc_prev_node: sexr.gengc_prev_node.into(),
         payload,
-    };
-
-    let update = Update {
-        special_values,
-        sexprec,
-    };
-    rprintln!("{}", update);
-
-    // Open a new connection each time because I don't wanna deal with weirdness
-    // like what happens if I store it in a thread local and then the lib gets updated and reloaded.
-    let mut stream = TcpStream::connect("127.0.0.1:26000").unwrap();
-    //stream.set_nodelay(true).unwrap();
-    //stream.set_nonblocking(true).unwrap();
-
-    let netmsg = net::serialize(update);
-    net::send(&netmsg, &mut stream).unwrap();
-}
-
-fn to_sexp(obj: Robj) -> SEXP {
-    // Note the cast is from from libR_sys::SEXP to bindingsr::SEXP
-    match obj {
-        Robj::Owned(sexp) => sexp as bindingsr::SEXP,
-        Robj::Sys(sexp) => sexp as bindingsr::SEXP,
     }
 }
 
-fn get_special_values() -> SpecialValues {
+fn get_global_values() -> GlobalValues {
     // TODO use these for testing (also some stuff in bindings below them)
-    SpecialValues {
+    GlobalValues {
         unbound_value: unsafe { R_UnboundValue.into() },
         nil_value: unsafe { R_NilValue.into() },
         missing_arg: unsafe { R_MissingArg.into() },
@@ -208,9 +211,7 @@ fn get_vecsxp(sexp: *mut SEXPREC) -> SexpPayload {
     })
 }
 
-// TODO primsxp?
-
-fn get_symsxp(sexr: &SEXPREC) -> SexpPayload {
+fn get_symsxp_payload(sexr: &SEXPREC) -> SexpPayload {
     SexpPayload::Symsxp(Symsxp {
         pname: unsafe { sexr.u.symsxp.pname.into() },
         value: unsafe { sexr.u.symsxp.value.into() },
@@ -218,7 +219,7 @@ fn get_symsxp(sexr: &SEXPREC) -> SexpPayload {
     })
 }
 
-fn get_listsxp(sexr: &SEXPREC) -> SexpPayload {
+fn get_listsxp_payload(sexr: &SEXPREC) -> SexpPayload {
     SexpPayload::Listsxp(Listsxp {
         carval: unsafe { sexr.u.listsxp.carval.into() },
         cdrval: unsafe { sexr.u.listsxp.cdrval.into() },
@@ -226,7 +227,7 @@ fn get_listsxp(sexr: &SEXPREC) -> SexpPayload {
     })
 }
 
-fn get_envsxp(sexr: &SEXPREC) -> SexpPayload {
+fn get_envsxp_payload(sexr: &SEXPREC) -> SexpPayload {
     SexpPayload::Envsxp(Envsxp {
         frame: unsafe { sexr.u.envsxp.frame.into() },
         enclos: unsafe { sexr.u.envsxp.enclos.into() },
@@ -234,7 +235,7 @@ fn get_envsxp(sexr: &SEXPREC) -> SexpPayload {
     })
 }
 
-fn get_closxp(sexr: &SEXPREC) -> SexpPayload {
+fn get_closxp_payload(sexr: &SEXPREC) -> SexpPayload {
     SexpPayload::Closxp(Closxp {
         formals: unsafe { sexr.u.closxp.formals.into() },
         body: unsafe { sexr.u.closxp.body.into() },
@@ -242,7 +243,7 @@ fn get_closxp(sexr: &SEXPREC) -> SexpPayload {
     })
 }
 
-fn get_promsxp(sexr: &SEXPREC) -> SexpPayload {
+fn get_promsxp_payload(sexr: &SEXPREC) -> SexpPayload {
     SexpPayload::Promsxp(Promsxp {
         value: unsafe { sexr.u.promsxp.value.into() },
         expr: unsafe { sexr.u.promsxp.expr.into() },
@@ -250,7 +251,7 @@ fn get_promsxp(sexr: &SEXPREC) -> SexpPayload {
     })
 }
 
-fn get_default_sxp(sexr: &SEXPREC) -> SexpPayload {
+fn get_default_payload(sexr: &SEXPREC) -> SexpPayload {
     SexpPayload::Listsxp(Listsxp {
         carval: unsafe { sexr.u.listsxp.carval.into() },
         cdrval: unsafe { sexr.u.listsxp.cdrval.into() },
