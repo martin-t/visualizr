@@ -99,33 +99,9 @@ fn get_sexprec(sexp: SEXP) -> Sexprec {
     };
     let sxpinfo_bits = sexr.sxpinfo._bitfield_1.get(0, 64);
 
-    // TODO GP - from inspect.c
-    // if (IS_S4_OBJECT(v)) { if (a) Rprintf(","); Rprintf("S4"); a = 1; }
-    // if (TYPEOF(v) == SYMSXP || TYPEOF(v) == LISTSXP) {
-    //     if (IS_ACTIVE_BINDING(v)) { if (a) Rprintf(","); Rprintf("AB"); a = 1; }
-    //     if (BINDING_IS_LOCKED(v)) { if (a) Rprintf(","); Rprintf("LCK"); a = 1; }
-    // }
-    // if (TYPEOF(v) == ENVSXP) {
-    //     if (FRAME_IS_LOCKED(v)) { if (a) Rprintf(","); Rprintf("LCK"); a = 1; }
-    //     if (IS_GLOBAL_FRAME(v)) { if (a) Rprintf(","); Rprintf("GL"); a = 1; }
-    // }
-
     // TODO recurse into attrib if not nil
 
-    // TODO
-    // if (ALTREP(v) && ALTREP_INSPECT(v, pre, deep, pvec, inspect_subtree)) {
-    // if (ATTRIB(v) && ATTRIB(v) != R_NilValue && TYPEOF(v) != CHARSXP) {
-    //     pp(pre);
-    //     Rprintf("ATTRIB:\n");
-    //     inspect_tree(pre+2, ATTRIB(v), deep, pvec);
-    // }
-    // return;
-    // }
-
     let ty = Sexptype::try_from(ty_int).unwrap();
-
-    // TODO inspect.c line 130-194 - print more type-specific info
-    // Note we must not alter the internal state - careful when printing.
 
     let payload = match ty {
         Sexptype::SYMSXP => get_symsxp_payload(sexr),

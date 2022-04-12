@@ -23,16 +23,10 @@ impl Display for Update {
         writeln!(f, "sxpinfo: {:#066b}", self.sexprec.sxpinfo_bits)?;
         // named and extra are 16 bits so 5 digits is exactly enough,
         // everything else has more space than needed
-        writeln!(f,
-                " fields: type scalar obj alt           gp          mark debug trace spare gcgen gccls named extra",
-            )?;
-        writeln!(f,
-                "   bits:  [5]    [1] [1] [1]          [16]         [1]   [1]   [1]   [1]   [1]   [3]  [16]  [16]",
-            )?;
+        writeln!(f, " fields: type scalar obj alt           gp          mark debug trace spare gcgen gccls named extra")?;
+        writeln!(f, "   bits:  [5]    [1] [1] [1]          [16]         [1]   [1]   [1]   [1]   [1]   [3]  [16]  [16]")?;
         // GP needs 18 chars: 2 for "0b" and 16 for the bits
-        writeln!(
-            f,
-            "         {:4} {:6} {:3} {:3}  {:#018b}  {:4} {:5} {:5} {:5} {:5} {:5} {:5} {:5}",
+        writeln!(f, "         {:4} {:6} {:3} {:3}  {:#018b}  {:4} {:5} {:5} {:5} {:5} {:5} {:5} {:5}",
             self.sexprec.sxpinfo.ty,
             self.sexprec.sxpinfo.scalar,
             self.sexprec.sxpinfo.obj,
@@ -47,6 +41,48 @@ impl Display for Update {
             self.sexprec.sxpinfo.named,
             self.sexprec.sxpinfo.extra,
         )?;
+
+        // GP:
+        // 0: DDVAL / HASHASH / READY_TO_FINALIZE       |
+        // 1: BYTES / FINALIZE_ON_EXIT                  | MISSING
+        // 2: LATIN1                                    |
+        // 3: UTF8                                      |
+        // 4: S4
+        // 5: NOJIT / GROWABLE / CACHED
+        // 6: ASCII
+        // 7:
+        // 8:
+        // 9:
+        // 10:
+        // 11: ASSIGNMENT_PENDING
+        // 12: SPECIAL_SYMBOL / NO_SPECIAL_SYMBOLS
+        // 13: BASE_SYM_CACHED
+        // 14: BINDING_LOCK / FRAME_LOCK
+        // 15: ACTIVE_BINDING / GLOBAL_FRAME
+
+        // ENC_KNOWN = LATIN1_MASK | UTF8_MASK
+        // ENVFLAGS / PRSEEN / LEVELS / ARGUSED / OLDTYPE = GP
+        // PRSEEN: R-ints says only bit 0
+        // GROWABLE is true only if (&& XLENGTH(x) < XTRUELENGTH(x))
+        // Latin-1, UTF-8 or ASCII + cached - only CHARSXP according to R-ints
+        // check inspect.c - some bits only apply for some types
+
+        // TODO recheck all the bits and masks before release
+
+        writeln!(f, "         GP bit meaning: |< MISSING [0:3] >|                                   ASSIGNMENT_PENDING")?;
+        writeln!(f, "                         DDVAL / HASHASH / READY_TO_FINALIZE                   |    SPECIAL_SYMBOL / NO_SPECIAL_SYMBOLS")?;
+        writeln!(f, "                         |    BYTES / FINALIZE_ON_EXIT                         |    |    BASE_SYM_CACHED")?;
+        writeln!(f, "                         |    |    LATIN1         NOJIT / GROWABLE / CACHED    |    |    |    BINDING_LOCK / FRAME_LOCK")?;
+        writeln!(f, "                         |    |    |    UTF8 S4   |    ASCII                   |    |    |    |    ACTIVE_BINDING / GLOBAL_FRAME")?;
+        writeln!(f, "                  index: 0    1    2    3    4    5    6    7    8    9   10   11   12   13   14   15")?;
+        write!(f, "                  value: ")?;
+        for index in 0..16 {
+            let bit = self.sexprec.sxpinfo.gp & (1 << index);
+            let is_set = bit >> index; // Shift it so only 0 or 1 remains
+            write!(f, "{:<5}", is_set)?;
+        }
+        writeln!(f)?;
+
         writeln!(f, "attrib {}", self.global_values.fmt_ptr(self.sexprec.attrib))?;
         writeln!(f, "gengc_next_node {}", self.global_values.fmt_ptr(self.sexprec.gengc_next_node))?;
         writeln!(f, "gengc_prev_node {}", self.global_values.fmt_ptr(self.sexprec.gengc_prev_node))?;
