@@ -3,6 +3,7 @@ name = "commonr"
 version = "0.1.0"
 edition = "2021"
 authors = ["Martin Taibr <taibr.martin@gmail.com>"]
+license = "AGPL-3.0-or-later"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
