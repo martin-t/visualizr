@@ -19,7 +19,7 @@ For testing:
 5 PROMSXP
 6 LANGSXP   visualize(substitute(2+2))
 7 SPECIALSXP
-8 BUILTINSXP    visualize(`(`)
+8 BUILTINSXP    visualize(`(`) ; visualize(`-`)
 9 CHARSXP
     contained in STRSXP
 10 LGLSXP
@@ -106,9 +106,10 @@ fn get_sexprec(sexp: SEXP) -> Sexprec {
     let payload = match ty {
         Sexptype::SYMSXP => get_symsxp_payload(sexr),
         Sexptype::LISTSXP | Sexptype::LANGSXP | Sexptype::EXPRSXP => get_listsxp_payload(sexr),
-        Sexptype::CLOSXP | Sexptype::SPECIALSXP | Sexptype::BUILTINSXP => get_closxp_payload(sexr),
+        Sexptype::CLOSXP  => get_closxp_payload(sexr),
         Sexptype::ENVSXP => get_envsxp_payload(sexr),
         Sexptype::PROMSXP => get_promsxp_payload(sexr),
+        Sexptype::SPECIALSXP | Sexptype::BUILTINSXP=>get_primsxp_payload(sexr),
         Sexptype::CHARSXP
         | Sexptype::LGLSXP
         | Sexptype::INTSXP
@@ -184,6 +185,12 @@ fn get_vecsxp(sexp: *mut SEXPREC) -> SexpPayload {
     SexpPayload::Vecsxp(Vecsxp {
         length: unsafe { sexr_align.s.vecsxp.length as i64 },
         truelength: unsafe { sexr_align.s.vecsxp.truelength as i64 },
+    })
+}
+
+fn get_primsxp_payload(sexr: &SEXPREC) -> SexpPayload {
+    SexpPayload::Primsxp(Primsxp {
+        offset: unsafe { sexr.u.primsxp.offset },
     })
 }
 
