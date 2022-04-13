@@ -92,8 +92,8 @@ async fn main() {
         clear_background(WHITE);
 
         let box1_pos = vec2(50.0, 50.0);
-        let box2_pos = vec2(100.0, 400.0);
-        let box_size = vec2(800.0, 250.0);
+        let box2_pos = vec2(100.0, 600.0);
+        let box_size = vec2(950.0, 500.0);
 
         draw_box(1, box1_pos, box_size, &text);
         draw_box(2, box2_pos, box_size, &text);
