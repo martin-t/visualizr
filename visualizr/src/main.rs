@@ -117,18 +117,15 @@ async fn main() {
 
 fn draw_box(id: u64, box_pos: Vec2, box_size: Vec2, text: &str) {
     // We wanna allow copying the data (especially stuff like pointers) but not editing
-    // so we use an InputText but reset the text every frame.
-    // There seems to be no native way to allow copying from a Label
-    // or disable editing in an InputText.
-    // TODO maybe use Editobx + multiline?
+    // so we use an Editbox but reset the text every frame.
+    // There seems to be no proper/native way to allow copying from a Label
+    // or disable editing in an Editbox.
 
     Group::new(hash!() + id, box_size)
         .position(box_pos)
         .ui(&mut root_ui(), |ui| {
-            for line in text.split('\n') {
-                let mut line = line.to_owned();
-                ui.input_text(hash!() + id, "", &mut line);
-            }
+            let mut text = text.to_owned();
+            ui.editbox(hash!() + id, box_size - vec2(5.0, 5.0), &mut text);
         });
 }
 
