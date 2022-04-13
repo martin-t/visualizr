@@ -25,7 +25,7 @@ Currently you need to compile this project from source to use it.
 
 ## Development
 
-Misc note: `rextendr::document()` *sometimes* doesn't notice when a dependency changes - you have to make a change in inspectr directly for common/bindingsr to be recompiled.
+Misc note: `rextendr::document()` *sometimes* doesn't notice when a dependency changes - you have to make a change in inspectr directly for commonr/bindingsr to be recompiled.
 
 ## License
 
