@@ -1,11 +1,37 @@
 [workspace]
 
+# Inspectr is only listed here so that RA works on it.
+# It also seems to be affected by some of the config here, in .cargo/ or rust-toolchain.toml.
+# It however has its own build directory set by rextendr.
 members = [
     "bindingsr/",
     "commonr/",
     "inspectr/src/rust/",
     "visualizr/"
 ]
+
+# Cargo commands only build/run visualizr,
+# inspectr needs to be built using rextendr - see readme.
 default-members = [
     "visualizr"
 ]
+
+
+[profile.dev]
+# Abort on panic might be a better default:
+# https://vorner.github.io/2018/07/22/dont_panic.html
+# This makes backtraces useless, see .cargo/config-example.toml for a fix.
+# Commented out because it causes the R REPL to hang on a panic
+# and there's no easy way to set this for visualizr but not inspectr.
+# Same for profile.release.
+#panic = "abort"
+
+# This doesn't apply to workspace members: https://doc.rust-lang.org/cargo/reference/profiles.html#overrides
+[profile.dev.package."*"]
+# Optimize deps but not this crate itself (tip from macroquad).
+# This seems to slightly improve performance
+# and shouldn't meaningfully increase incremental compile times because deps only change rarely.
+opt-level = 3
+
+[profile.release]
+#panic = "abort"  # See profile.dev
