@@ -159,6 +159,7 @@ fn get_sexprec(sexp: SEXP) -> Sexprec {
 
 fn get_global_values() -> GlobalValues {
     // TODO use these for testing (also some stuff in bindings below them)
+    // LATER more values? good list in memory.c - ctrl+f /* forward all roots */
     GlobalValues {
         unbound_value: unsafe { R_UnboundValue.into() },
         nil_value: unsafe { R_NilValue.into() },
