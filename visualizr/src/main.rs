@@ -1,15 +1,17 @@
 use std::{
-    collections::VecDeque,
+    collections::{HashMap, VecDeque},
     io::ErrorKind,
     net::{TcpListener, TcpStream},
 };
 
-use commonr::{data::Update, net};
+use commonr::{data::*, net};
 use macroquad::{
     hash,
     prelude::*,
     ui::{root_ui, widgets::Group},
 };
+
+// TODO RA doesn't work on this file???
 
 #[derive(Debug)]
 struct Server {
@@ -19,6 +21,17 @@ struct Server {
 }
 
 impl Server {
+    fn new() -> Self {
+        let listener = TcpListener::bind("127.0.0.1:26000").unwrap();
+        listener.set_nonblocking(true).unwrap();
+
+        Self {
+            listener,
+            connection: None,
+            msgs: Vec::new(),
+        }
+    }
+
     /// Accept a new connection and/or read from it.
     fn receive(&mut self) {
         if self.connection.is_none() {
@@ -54,6 +67,13 @@ struct Connection {
     buffer: VecDeque<u8>,
 }
 
+#[derive(Debug)]
+struct State {
+    globals: Globals,
+    sexprecs: Vec<Sexprec>,
+    offset: Vec2,
+}
+
 fn window_conf() -> Conf {
     Conf {
         window_title: "visualizr".to_owned(),
@@ -71,56 +91,90 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
-    let listener = TcpListener::bind("127.0.0.1:26000").unwrap();
-    listener.set_nonblocking(true).unwrap();
-
-    let mut server = Server {
-        listener,
-        connection: None,
-        msgs: Vec::new(),
-    };
-
-    let mut text = "<nothing>\n".to_owned();
+    let mut server = Server::new();
+    let mut state = None;
     loop {
         server.receive();
 
-        for msg in server.msgs.drain(..) {
-            dbg!(&msg);
-            text = msg.to_string();
+        for update in server.msgs.drain(..) {
+            dbg!(&update);
+            state = Some(State {
+                globals: update.globals,
+                sexprecs: update.sexprecs,
+                offset: Vec2::ZERO,
+            });
         }
 
         clear_background(WHITE);
 
-        let box1_pos = vec2(50.0, 50.0);
-        let box2_pos = vec2(100.0, 600.0);
-        let box_size = vec2(950.0, 500.0);
-
-        draw_box(1, box1_pos, box_size, &text);
-        draw_box(2, box2_pos, box_size, &text);
-
-        let offset = 20.0;
-        draw_connection(
-            box1_pos + vec2(offset, box_size.y),
-            box2_pos + vec2(0.0, offset),
-        );
-
-        // let mut single_line = "test".to_owned();
-        // Group::new(hash!(), box_size)
-        //     .position(box1_pos)
-        //     .ui(&mut root_ui(), |ui| {
-        //         ui.input_text(hash!(), "", &mut single_line);
-        //     });
+        if let Some(state) = &mut state {
+            draw_tree(state);
+        } else {
+            draw_initial_box();
+        }
 
         next_frame().await
     }
 }
 
+fn draw_initial_box() {
+    draw_box(
+        0,
+        vec2(100.0, 100.0),
+        vec2(500.0, 50.0),
+        "<waiting for input from visualizr>",
+    );
+}
+
+fn draw_tree(state: &mut State) {
+    let mut incoming_ptrs = HashMap::new();
+    for sexprec in &state.sexprecs {
+        let addr = state.globals.fmt_ptr(sexprec.address);
+        incoming_ptrs.entry(addr).or_insert(0);
+
+        let mut ptrs = sexprec.payload.pointers();
+        ptrs.push(("", sexprec.attrib));
+        for (_name, ptr) in ptrs {
+            let addr = state.globals.fmt_ptr(ptr);
+            dbg!(_name, &addr);
+            let cnt = incoming_ptrs.entry(addr).or_insert(0);
+            *cnt += 1;
+        }
+    }
+    dbg!(incoming_ptrs);
+
+    let box_size = vec2(950.0, 290.0);
+    let mut box_pos = vec2(50.0, 50.0);
+    let delta_y = 400.0;
+
+    for sexprec in &state.sexprecs {
+        let text = SexpFormatter(&state.globals, sexprec).to_string();
+        draw_box(sexprec.address.0, box_pos, box_size, &text);
+        box_pos.y += delta_y;
+    }
+
+    // let offset = 20.0;
+    // draw_connection(
+    //     box1_pos + vec2(offset, box_size.y),
+    //     box2_pos + vec2(0.0, offset),
+    // );
+}
+
 fn draw_box(id: u64, box_pos: Vec2, box_size: Vec2, text: &str) {
+    // Don't draw if out of bounds.
+    // LATER Does this actually affect perf?
+    if box_pos.x + box_size.x < 0.0
+        || box_pos.y + box_size.y < 0.0
+        || box_pos.x > screen_width()
+        || box_pos.y > screen_height()
+    {
+        return;
+    }
+
     // We wanna allow copying the data (especially stuff like pointers) but not editing
     // so we use an Editbox but reset the text every frame.
     // There seems to be no proper/native way to allow copying from a Label
     // or disable editing in an Editbox.
-
     Group::new(hash!() + id, box_size)
         .position(box_pos)
         .ui(&mut root_ui(), |ui| {

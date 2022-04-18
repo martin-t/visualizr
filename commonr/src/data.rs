@@ -5,41 +5,56 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Update {
-    pub global_values: GlobalValues,
-    pub sexprec: Sexprec,
+    pub globals: Globals,
+    pub sexprecs: Vec<Sexprec>,
 }
 
-#[rustfmt::skip]
 impl Display for Update {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        for sexprec in &self.sexprecs{
+            writeln!(f, "{}", SexpFormatter(&self.globals, sexprec))?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub struct SexpFormatter<'a>(pub &'a Globals, pub &'a Sexprec);
+
+impl Display for SexpFormatter<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let globals = self.0;
+        let sexprec = &self.1;
         writeln!(
             f,
             "address: {}, type: {}/{}",
-            self.global_values.fmt_ptr(self.sexprec.address),
-            self.sexprec.ty_name,
-            self.sexprec.ty,
+            globals.fmt_ptr(sexprec.address),
+            sexprec.ty_name,
+            sexprec.ty,
         )?;
 
-        writeln!(f, "sxpinfo: {:#066b}", self.sexprec.sxpinfo_bits)?;
+        writeln!(f, "sxpinfo: {:#066b}", sexprec.sxpinfo_bits)?;
         // named and extra are 16 bits so 5 digits is exactly enough,
         // everything else has more space than needed
-        writeln!(f, " fields: type scalar obj alt           gp          mark debug trace spare gcgen gccls named extra")?;
+        writeln!(f, " fields: type scalar obj alt           gp         mark debug trace spare gcgen gccls named extra")?;
         writeln!(f, "   bits:  [5]    [1] [1] [1]          [16]         [1]   [1]   [1]   [1]   [1]   [3]  [16]  [16]")?;
         // GP needs 18 chars: 2 for "0b" and 16 for the bits
-        writeln!(f, "         {:4} {:6} {:3} {:3}  {:#018b}  {:4} {:5} {:5} {:5} {:5} {:5} {:5} {:5}",
-            self.sexprec.sxpinfo.ty,
-            self.sexprec.sxpinfo.scalar,
-            self.sexprec.sxpinfo.obj,
-            self.sexprec.sxpinfo.alt,
-            self.sexprec.sxpinfo.gp,
-            self.sexprec.sxpinfo.mark,
-            self.sexprec.sxpinfo.debug,
-            self.sexprec.sxpinfo.trace,
-            self.sexprec.sxpinfo.spare,
-            self.sexprec.sxpinfo.gcgen,
-            self.sexprec.sxpinfo.gccls,
-            self.sexprec.sxpinfo.named,
-            self.sexprec.sxpinfo.extra,
+        writeln!(
+            f,
+            "         {:4} {:6} {:3} {:3}  {:#018b}  {:4} {:5} {:5} {:5} {:5} {:5} {:5} {:5}",
+            sexprec.sxpinfo.ty,
+            sexprec.sxpinfo.scalar,
+            sexprec.sxpinfo.obj,
+            sexprec.sxpinfo.alt,
+            sexprec.sxpinfo.gp,
+            sexprec.sxpinfo.mark,
+            sexprec.sxpinfo.debug,
+            sexprec.sxpinfo.trace,
+            sexprec.sxpinfo.spare,
+            sexprec.sxpinfo.gcgen,
+            sexprec.sxpinfo.gccls,
+            sexprec.sxpinfo.named,
+            sexprec.sxpinfo.extra,
         )?;
 
         // GP:
@@ -77,50 +92,57 @@ impl Display for Update {
         writeln!(f, "                  index: 0    1    2    3    4    5    6    7    8    9   10   11   12   13   14   15")?;
         write!(f, "                  value: ")?;
         for index in 0..16 {
-            let bit = self.sexprec.sxpinfo.gp & (1 << index);
+            let bit = sexprec.sxpinfo.gp & (1 << index);
             let is_set = bit >> index; // Shift it so only 0 or 1 remains
             write!(f, "{:<5}", is_set)?;
         }
         writeln!(f)?;
 
-        writeln!(f, "attrib {}", self.global_values.fmt_ptr(self.sexprec.attrib))?;
-        writeln!(f, "gengc_next_node {}", self.global_values.fmt_ptr(self.sexprec.gengc_next_node))?;
-        writeln!(f, "gengc_prev_node {}", self.global_values.fmt_ptr(self.sexprec.gengc_prev_node))?;
+        writeln!(f, "attrib {}", globals.fmt_ptr(sexprec.attrib))?;
+        writeln!(
+            f,
+            "gengc_next_node {}",
+            globals.fmt_ptr(sexprec.gengc_next_node)
+        )?;
+        writeln!(
+            f,
+            "gengc_prev_node {}",
+            globals.fmt_ptr(sexprec.gengc_prev_node)
+        )?;
 
-        match &self.sexprec.payload {
-            SexpPayload::Nothing => writeln!(f, "no paylod")?, // TODO all have payload? - remove?
+        match &sexprec.payload {
             SexpPayload::Vecsxp(vecsxp) => {
-                writeln!(f, "length: {}", vecsxp.length)?;
-                writeln!(f, "truelength: {}", vecsxp.truelength)?;
+                write!(f, "length: {:<35}", vecsxp.length)?;
+                write!(f, "truelength: {:<35}", vecsxp.truelength)?;
             }
             SexpPayload::Primsxp(primsxp) => {
-                writeln!(f, "offset: {}", primsxp.offset)?;
-            },
+                write!(f, "offset: {:<35}", primsxp.offset)?;
+            }
             SexpPayload::Symsxp(symsxp) => {
-                writeln!(f, "pname: {}", self.global_values.fmt_ptr(symsxp.pname))?;
-                writeln!(f, "value: {}", self.global_values.fmt_ptr(symsxp.value))?;
-                writeln!(f, "internal: {}", self.global_values.fmt_ptr(symsxp.internal))?;
-            },
+                write!(f, "pname: {:35}", globals.fmt_ptr(symsxp.pname))?;
+                write!(f, "value: {:35}", globals.fmt_ptr(symsxp.value))?;
+                write!(f, "internal: {:35}", globals.fmt_ptr(symsxp.internal))?;
+            }
             SexpPayload::Listsxp(listsxp) => {
-                writeln!(f, "carval: {}", self.global_values.fmt_ptr(listsxp.carval))?;
-                writeln!(f, "cdrval: {}", self.global_values.fmt_ptr(listsxp.cdrval))?;
-                writeln!(f, "tagval: {}", self.global_values.fmt_ptr(listsxp.tagval))?;
-            },
+                write!(f, "carval: {:35}", globals.fmt_ptr(listsxp.carval))?;
+                write!(f, "cdrval: {:35}", globals.fmt_ptr(listsxp.cdrval))?;
+                write!(f, "tagval: {:35}", globals.fmt_ptr(listsxp.tagval))?;
+            }
             SexpPayload::Envsxp(envsxp) => {
-                writeln!(f, "frame: {}", self.global_values.fmt_ptr(envsxp.frame))?;
-                writeln!(f, "enclos: {}", self.global_values.fmt_ptr(envsxp.enclos))?;
-                writeln!(f, "hashtab: {}", self.global_values.fmt_ptr(envsxp.hashtab))?;
-            },
+                write!(f, "frame: {:35}", globals.fmt_ptr(envsxp.frame))?;
+                write!(f, "enclos: {:35}", globals.fmt_ptr(envsxp.enclos))?;
+                write!(f, "hashtab: {:35}", globals.fmt_ptr(envsxp.hashtab))?;
+            }
             SexpPayload::Closxp(closxp) => {
-                writeln!(f, "formals: {}", self.global_values.fmt_ptr(closxp.formals))?;
-                writeln!(f, "body: {}", self.global_values.fmt_ptr(closxp.body))?;
-                writeln!(f, "env: {}", self.global_values.fmt_ptr(closxp.env))?;
-            },
+                write!(f, "formals: {:35}", globals.fmt_ptr(closxp.formals))?;
+                write!(f, "body: {:35}", globals.fmt_ptr(closxp.body))?;
+                write!(f, "env: {:35}", globals.fmt_ptr(closxp.env))?;
+            }
             SexpPayload::Promsxp(promsxp) => {
-                writeln!(f, "value: {}", self.global_values.fmt_ptr(promsxp.value))?;
-                writeln!(f, "expr: {}", self.global_values.fmt_ptr(promsxp.expr))?;
-                writeln!(f, "env: {}", self.global_values.fmt_ptr(promsxp.env))?;
-            },
+                write!(f, "value: {:35}", globals.fmt_ptr(promsxp.value))?;
+                write!(f, "expr: {:35}", globals.fmt_ptr(promsxp.expr))?;
+                write!(f, "env: {:35}", globals.fmt_ptr(promsxp.env))?;
+            }
         }
 
         Ok(())
@@ -128,7 +150,7 @@ impl Display for Update {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct GlobalValues {
+pub struct Globals {
     pub unbound_value: Sexp,
     pub nil_value: Sexp,
     pub missing_arg: Sexp,
@@ -143,9 +165,9 @@ pub struct GlobalValues {
     //pub restart_token: Sexp,
 }
 
-impl GlobalValues {
+impl Globals {
     #[must_use]
-    fn fmt_ptr(&self, sexp: Sexp) -> String {
+    pub fn fmt_ptr(&self, sexp: Sexp) -> String {
         // Don't impl Display for Sexp so it's impossible to accidentally forget to use this function.
         let mut s = format!("@{:x}", sexp.0);
         if sexp == self.unbound_value {
@@ -248,7 +270,6 @@ pub struct Sxpinfo {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum SexpPayload {
-    Nothing,
     Vecsxp(Vecsxp),
     Primsxp(Primsxp),
     Symsxp(Symsxp),
@@ -256,6 +277,55 @@ pub enum SexpPayload {
     Envsxp(Envsxp),
     Closxp(Closxp),
     Promsxp(Promsxp),
+}
+
+#[rustfmt::skip]
+impl SexpPayload {
+    pub fn pointers(&self) -> Vec<(&'static str, Sexp)> {
+        match &self {
+            SexpPayload::Vecsxp(_vecsxp) => {
+                vec![]
+            }
+            SexpPayload::Primsxp(_primsxp) => {
+                vec![]
+            }
+            SexpPayload::Symsxp(symsxp) => {
+                vec![
+                    ("pname", symsxp.pname),
+                    ("value", symsxp.value),
+                    ("internal", symsxp.internal),
+                ]
+            }
+            SexpPayload::Listsxp(listsxp) => {
+                vec![
+                    ("carval", listsxp.carval),
+                    ("cdrval", listsxp.cdrval),
+                    ("tagval", listsxp.tagval),
+                ]
+            }
+            SexpPayload::Envsxp(envsxp) => {
+                vec![
+                    ("frame", envsxp.frame),
+                    ("enclos", envsxp.enclos),
+                    ("hashtab", envsxp.hashtab),
+                ]
+            }
+            SexpPayload::Closxp(closxp) => {
+                vec![
+                    ("formals", closxp.formals),
+                    ("body", closxp.body),
+                    ("env", closxp.env),
+                ]
+            }
+            SexpPayload::Promsxp(promsxp) => {
+                vec![
+                    ("value", promsxp.value),
+                    ("expr", promsxp.expr),
+                    ("env", promsxp.env),
+                ]
+            }
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]

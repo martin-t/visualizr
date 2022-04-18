@@ -1,12 +1,14 @@
 use std::{
     collections::VecDeque,
     io::{self, ErrorKind, Read, Write},
+    mem,
     net::TcpStream,
 };
 
 use serde::{de::DeserializeOwned, Serialize};
 
-const HEADER_LEN: usize = 2;
+type MsgLen = u32;
+const HEADER_LEN: usize = mem::size_of::<MsgLen>();
 
 #[derive(Debug)]
 pub struct NetworkMessage {
@@ -19,16 +21,19 @@ where
     M: Serialize,
 {
     let buf = bincode::serialize(&message).expect("bincode failed to serialize message");
-    let content_len = u16::try_from(buf.len())
-        .expect("bincode message length overflowed")
+    let content_len = MsgLen::try_from(buf.len())
+        .unwrap_or_else(|err| {
+            panic!(
+                "bincode message length ({} bytes) overflowed: {:?}",
+                buf.len(),
+                err
+            )
+        })
         .to_le_bytes();
     NetworkMessage { content_len, buf }
 }
 
-pub fn send(
-    network_message: &NetworkMessage,
-    stream: &mut TcpStream,
-) -> Result<(), io::Error> {
+pub fn send(network_message: &NetworkMessage, stream: &mut TcpStream) -> Result<(), io::Error> {
     // Prefix data by length so it's easy to parse on the other side.
     stream.write_all(&network_message.content_len)?;
     stream.write_all(&network_message.buf)?;
@@ -42,11 +47,7 @@ pub fn send(
 ///
 /// Returns whether the connection has been closed (doesn't matter if cleanly or reading failed).
 #[must_use]
-pub fn receive<M>(
-    stream: &mut TcpStream,
-    buffer: &mut VecDeque<u8>,
-    messages: &mut Vec<M>,
-) -> bool
+pub fn receive<M>(stream: &mut TcpStream, buffer: &mut VecDeque<u8>, messages: &mut Vec<M>) -> bool
 where
     M: DeserializeOwned,
 {
@@ -83,14 +84,20 @@ where
         if buffer.len() < HEADER_LEN {
             break;
         }
-        let len_bytes = [buffer[0], buffer[1]];
-        let content_len = usize::from(u16::from_le_bytes(len_bytes));
+
+        // There's no convenient way to make this generic over msg len 2 and 4,
+        // just keep one version commented out.
+        //let len_bytes = [buffer[0], buffer[1]];
+        //let content_len = usize::from(MsgLen::from_le_bytes(len_bytes));
+        let len_bytes = [buffer[0], buffer[1], buffer[2], buffer[3]];
+        let content_len = usize::try_from(MsgLen::from_le_bytes(len_bytes)).unwrap();
+
         if buffer.len() < HEADER_LEN + content_len {
             // Not enough bytes in buffer for a full frame.
             break;
         }
-        buffer.pop_front();
-        buffer.pop_front();
+        buffer.drain(0..HEADER_LEN);
+
         let bytes: Vec<_> = buffer.drain(0..content_len).collect();
         let message = bincode::deserialize(&bytes).unwrap();
         messages.push(message);

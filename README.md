@@ -5,6 +5,7 @@ A tool for visualizing the internal representation of objects in the R language
 TODO screenshot
 
 The code is split into 2 parts:
+
 - Inspectr - an R package which reads the internals of R objects and sends them to visualizr
 - Visualizr - a GUI which draws the internals and relationships between objects
 
@@ -20,12 +21,13 @@ Currently you need to compile this project from source to use it.
 
 - Compile and run visualizr - `cargo run` in the project's root.
 - Run `R` in `inspectr/`
-    - Compile and load inspectr: `rextendr::document() ; devtools::load_all()`
-    - Now the `visualize` function should be available - use it on arbitrary R objects and visualizr will draw them.
+
+  - Compile and load inspectr: `rextendr::document() ; devtools::load_all()`
+  - Now the `visualize` function should be available - use it on arbitrary R objects and visualizr will draw them.
 
 ## Development
 
-Misc note: `rextendr::document()` *sometimes* doesn't notice when a dependency changes - you have to make a change in inspectr directly for commonr/bindingsr to be recompiled.
+Misc note: `rextendr::document()` (sometimes?) doesn't notice when a dependency changes - you have to make a change in inspectr directly for commonr/bindingsr to be recompiled.
 
 ## License
 
