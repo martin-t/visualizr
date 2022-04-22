@@ -11,8 +11,9 @@ pub struct Update {
 
 impl Display for Update {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        for sexprec in &self.sexprecs{
+        for sexprec in &self.sexprecs {
             writeln!(f, "{}", SexpFormatter(&self.globals, sexprec))?;
+            writeln!(f)?;
         }
         Ok(())
     }
@@ -110,6 +111,9 @@ impl Display for SexpFormatter<'_> {
             globals.fmt_ptr(sexprec.gengc_prev_node)
         )?;
 
+        // LATER Use payload.pointers() here?
+        //      The names have a different length.
+        //      Check how everything aligns if fmt_ptr prints the longest variant.
         match &sexprec.payload {
             SexpPayload::Vecsxp(vecsxp) => {
                 write!(f, "length: {:<35}", vecsxp.length)?;
@@ -197,6 +201,41 @@ impl Globals {
         //     s.push_str(" (R_RestartToken)");
         // }
         s
+    }
+
+    pub fn is_global(&self, sexp: Sexp) -> bool {
+        let values = [
+            self.unbound_value,
+            self.nil_value,
+            self.missing_arg,
+            self.global_env,
+            self.empty_env,
+            self.base_env,
+            self.base_namespace,
+            self.namespace_registry,
+            self.src_ref,
+            self.in_bc_interpreter,
+            self.current_expression,
+        ];
+        // let names = [
+        //     "R_UnboundValue",
+        //     "R_NilValue",
+        //     "R_MissingArg",
+        //     "R_GlobalEnv",
+        //     "R_EmptyEnv",
+        //     "R_BaseEnv",
+        //     "R_BaseNamespace",
+        //     "R_NamespaceRegistry",
+        //     "R_Srcref",
+        //     "R_InBCInterpreter",
+        //     "R_CurrentExpression",
+        // ];
+        for value in values {
+            if sexp == value {
+                return true;
+            }
+        }
+        false
     }
 }
 
