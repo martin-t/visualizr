@@ -12,10 +12,13 @@ use extendr_api::prelude::*;
 For testing:
 
 0 NILSXP    visualize(NULL)
-1 SYMSXP    x <- 1; visualize(substitute(x))
+1 SYMSXP    visualize(substitute(x))
+    The symbol does not have to be defined. Different undefined symbols give slightly different results
+    (whether marked, number of references).
 2 LISTSXP   visualize(pairlist(1,2,3))
 3 CLOSXP    visualize(visualize)
-4 ENVSXP
+4 ENVSXP    visualize(globalenv())
+                Child also has ATTRIB
 5 PROMSXP
 6 LANGSXP   visualize(substitute(2+2))
 7 SPECIALSXP
@@ -38,6 +41,12 @@ For testing:
 25 S4SXP
 30 NEWSXP
 31 FREESXP
+
+large trees:
+    11 sexps    visualize(pairlist(1,2,c(3,3,3),4,5))
+    64 sexps    visualize(globalenv()) FIXME this breaks visualizr
+    1225 sexps  visualize(visualize)
+
 */
 
 // TODO how to receive cmds????
@@ -55,10 +64,7 @@ fn visualize(obj: Robj) {
 
     let sexprecs = walk_sexps(sexp);
 
-    let update = Update {
-        globals,
-        sexprecs,
-    };
+    let update = Update { globals, sexprecs };
     rprintln!("{}", update);
     rprintln!("sending {} sexp(s)", update.sexprecs.len());
 
@@ -168,8 +174,9 @@ impl Walker {
             gengc_prev_node: sexr.gengc_prev_node.into(),
             payload,
         };
-        self.sexprecs.push(sexprec);
 
+        // Visualizr expects the root first so only walk the children after pushing the parent.
+        self.sexprecs.push(sexprec);
         self.walk_sexp(sexr.attrib);
         for ptr in ptrs {
             self.walk_sexp(ptr);

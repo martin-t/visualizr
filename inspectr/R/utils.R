@@ -13,6 +13,6 @@ rel <- function(obj) {
 }
 
 #' @export
-ins <- function(obj) {
-    .Internal(inspect(obj))
+ins <- function(obj, deep = -1, pvec = 5) {
+    .Internal(inspect(obj, deep, pvec))
 }

@@ -26,11 +26,12 @@ default-members = [
 # Same for profile.release.
 #panic = "abort"
 
-# This doesn't apply to workspace members: https://doc.rust-lang.org/cargo/reference/profiles.html#overrides
+# Asterisk does _not_ match workspace members: https://doc.rust-lang.org/cargo/reference/profiles.html#overrides
 [profile.dev.package."*"]
 # Optimize deps but not this crate itself (tip from macroquad).
 # This seems to slightly improve performance
 # and shouldn't meaningfully increase incremental compile times because deps only change rarely.
+# In fact, this could decrease them since proc macros are now optimized.
 opt-level = 3
 
 [profile.release]
